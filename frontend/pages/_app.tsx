@@ -8,6 +8,8 @@ import createEmotionCache from "../src/createEmotionCache";
 import initAuth from "../src/initAuth";
 import type { ReactElement, ReactNode } from "react";
 import type { NextPage } from "next";
+import { Provider } from "react-redux";
+import { makeStore } from "../app/store";
 
 initAuth();
 
@@ -24,16 +26,19 @@ export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
 function MyApp(props: MyAppProps) {
   const { emotionCache = clientSideEmotionCache, Component, pageProps } = props;
   const getLayout = Component.getLayout ?? ((page) => page);
+  const store = makeStore();
   return getLayout(
-    <CacheProvider value={emotionCache}>
-      <Head>
-        <meta name="viewport" content="initial-scale=1, width=device-width" />
-      </Head>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Component {...pageProps} />
-      </ThemeProvider>
-    </CacheProvider>
+    <Provider store={store}>
+      <CacheProvider value={emotionCache}>
+        <Head>
+          <meta name="viewport" content="initial-scale=1, width=device-width" />
+        </Head>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Component {...pageProps} />
+        </ThemeProvider>
+      </CacheProvider>
+    </Provider>
   );
 }
 

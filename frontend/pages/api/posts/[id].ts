@@ -1,9 +1,7 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from "next";
-import { resolve } from "path";
 
 type Data = {
-  name: string;
+  title: string;
 };
 
 export default function handler(
@@ -15,6 +13,6 @@ export default function handler(
       resolve("");
     }, 3000);
   }).then(() => {
-    res.status(200).json({ name: "John Doe" });
+    res.status(200).json({ title: "テスト - " + req.query.id });
   });
 }
