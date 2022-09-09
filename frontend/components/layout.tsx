@@ -2,23 +2,37 @@ import Head from "next/head";
 import Link from "next/link";
 import { ReactNode } from "react";
 import * as React from "react";
-import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
+import {
+  AppBar,
+  Box,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Container,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+} from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import InboxIcon from "@mui/icons-material/MoveToInbox";
 
 type Props = {
   children?: ReactNode;
 };
+const drawerWidth = 240;
 
 const Layout = ({ children }: Props) => {
   return (
-    <div>
+    <>
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static">
+        <AppBar
+          position="static"
+          sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        >
           <Toolbar>
             <IconButton
               size="large"
@@ -30,15 +44,17 @@ const Layout = ({ children }: Props) => {
               <MenuIcon />
             </IconButton>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              LEVAS
+              <Link color="inherit" href="/">
+                <a>LEVAS</a>
+              </Link>
             </Typography>
             <Button color="inherit">Login</Button>
           </Toolbar>
         </AppBar>
       </Box>
-      <div className="content">{children}</div>
+      <Container maxWidth="lg">{children}</Container>
       <footer className=""></footer>
-    </div>
+    </>
   );
 };
 
