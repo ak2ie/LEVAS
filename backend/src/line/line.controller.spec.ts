@@ -18,9 +18,9 @@ describe('LineController', () => {
     lineController = moduleRef.get<LineController>(LineController);
   });
   describe('findAll', () => {
-    it('OK', () => {
-      const res = lineService.sendBroadcastMessage('test');
-      expect(res).toBe('');
+    it('OK', async () => {
+      const res = await lineService.sendBroadcastMessage('test');
+      expect(res).toBe('OK');
     });
   });
 });

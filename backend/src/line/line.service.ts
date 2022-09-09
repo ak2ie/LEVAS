@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Client, middleware } from '@line/bot-sdk';
+import { Client, middleware, HTTPError } from '@line/bot-sdk';
 import { ConfigService } from '@nestjs/config';
+import { WebhookEvent } from './webhookEvent';
 
 @Injectable()
 export class LineService {
@@ -24,8 +25,52 @@ export class LineService {
   /**
    * 全員にメッセージ送信
    */
-  async sendBroadcastMessage(test: string) {
-    console.log(test);
+  async sendBroadcastMessage(text: string) {
     return 'OK';
+  }
+
+  /**
+   * ユーザーから受信したメッセージ処理
+   */
+  async receiveMessageHander(events: WebhookEvent) {
+    return events.message;
+  }
+
+  async sample(text: string) {
+    try {
+      await this.client.broadcast({
+        type: 'template',
+        altText: text,
+        template: {
+          type: 'confirm',
+          text: text,
+          actions: [
+            {
+              type: 'postback',
+              label: '参加', // ボタン
+              //   text: '参加', // ボタン押下時に送信するテキスト
+              data: '',
+              displayText: '送信しました',
+            },
+            {
+              type: 'postback',
+              label: '不参加',
+              //   text: '不参加',
+              data: '',
+              displayText: '送信しました',
+            },
+          ],
+        },
+      });
+
+      await this.client.replyMessage('', {
+        type: 'text',
+        text: 'お返事できません',
+      });
+    } catch (err) {
+      if (err instanceof HTTPError) {
+        console.error(err.message);
+      }
+    }
   }
 }

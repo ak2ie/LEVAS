@@ -1,5 +1,6 @@
 import { ServiceAccount } from 'firebase-admin';
 import * as admin from 'firebase-admin';
+import * as fireorm from 'fireorm';
 
 export const initializeFirebase = () => {
   /* ------------------------------------------------------------
@@ -16,4 +17,8 @@ export const initializeFirebase = () => {
     credential: admin.credential.cert(adminConfig),
     databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`,
   });
+
+  // fireorm
+  const firestore = admin.firestore();
+  fireorm.initialize(firestore);
 };

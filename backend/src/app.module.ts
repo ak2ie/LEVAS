@@ -8,6 +8,8 @@ import { UserController } from './users.controller';
 import { ConfigModule } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { LineModule } from './line/line.module';
+import { SettingModule } from './setting/setting.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { LineModule } from './line/line.module';
     }),
     UsersModule,
     LineModule,
+    SettingModule,
+    AuthModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService],

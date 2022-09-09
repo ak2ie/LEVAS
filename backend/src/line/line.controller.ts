@@ -13,7 +13,7 @@ export class LineController {
    * ユーザーからのメッセージの送信時などに、LINEプラットフォームから呼び出される
    */
   @Post('webhook')
-  @HttpCode(200)
+  @HttpCode(200) // LINEのルールにより200を返す必要あり
   async findAll(@Body() body: string): Promise<{ [key: string]: string }> {
     await this.lineService.sendBroadcastMessage('body');
     return { 'This action returns all cats': '' };
