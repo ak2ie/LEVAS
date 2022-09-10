@@ -1,11 +1,11 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
-import { LineGuard } from 'src/guards/line.guards';
 import { LineService } from './line.service';
 import { ApiTags } from '@nestjs/swagger';
+import { LINEAuthGuard } from 'src/auth/line.guard';
 
 @ApiTags('LINE')
 @Controller('line')
-// @UseGuards(LineGuard)
+@UseGuards(LINEAuthGuard)
 export class LineController {
   constructor(private readonly lineService: LineService) {}
 
