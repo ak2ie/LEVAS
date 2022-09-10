@@ -1,6 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { getAuth } from "firebase/auth";
-import * as firebase from "firebase/app";
 
 type Post = {
   title: string;
@@ -13,10 +12,8 @@ export const apiSlice = createApi({
     prepareHeaders: async (headers, { getState }) => {
       const auth = getAuth();
       const user = auth.currentUser;
-      console.log(user);
       if (user) {
         const token = await user.getIdToken();
-        console.log("トークン取得成功");
         headers.set("authorization", `Bearer ${token}`);
       }
       return headers;
@@ -31,12 +28,9 @@ export const apiSlice = createApi({
     }),
     addNewPost: builder.mutation({
       query: (initialPost) => ({
-        url: "/setting/",
-        method: "POST",
-        body: {
-          channelID: "id",
-          channelSecret: "secret",
-        },
+        url: "/setting/1",
+        method: "GET",
+        // body: initialPost,
       }),
       invalidatesTags: ["Post"],
     }),

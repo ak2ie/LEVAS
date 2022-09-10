@@ -11,13 +11,16 @@ import type { NextPageWithLayout } from "./_app";
 import type { ReactElement } from "react";
 import MinimumLayout from "../components/minimumLayout";
 import { useRouter } from "next/router";
+import { AuthAction, withAuthUser } from "next-firebase-auth";
 
 interface LoginFormInput {
   email: string;
   password: string;
 }
 
-const Login: NextPageWithLayout = () => {
+type AuthDataType = {};
+
+const Auth: NextPageWithLayout = () => {
   // フォーム バリデーション
   const schema = yup.object({
     email: yup
@@ -44,18 +47,12 @@ const Login: NextPageWithLayout = () => {
   const onSubmit: SubmitHandler<LoginFormInput> = (data) => {
     setLoading(true);
     setLoginError(false);
-    signInWithEmailAndPassword(auth, data.email, data.password)
-      .then((userCredential) => {
-        router.push("/demo");
-      })
-      .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
+    signInWithEmailAndPassword(auth, data.email, data.password).catch(
+      (error) => {
         setLoginError(true);
-      })
-      .finally(() => {
         setLoading(false);
-      });
+      }
+    );
   };
 
   return (
@@ -97,8 +94,12 @@ const Login: NextPageWithLayout = () => {
   );
 };
 
-Login.getLayout = function getLayout(page: ReactElement) {
+Auth.getLayout = function getLayout(page: ReactElement) {
   return <MinimumLayout>{page}</MinimumLayout>;
 };
 
-export default Login;
+export default withAuthUser<AuthDataType>({
+  whenAuthed: AuthAction.REDIRECT_TO_APP,
+  whenUnauthedBeforeInit: AuthAction.RETURN_NULL,
+  whenUnauthedAfterInit: AuthAction.RENDER,
+})(Auth);

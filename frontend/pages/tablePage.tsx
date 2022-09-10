@@ -25,6 +25,9 @@ import {
   TableBody,
   Paper,
 } from "@mui/material";
+import { withAuthUser, AuthAction } from "next-firebase-auth";
+
+type TablePageType = {};
 
 const TablePage: NextPageWithLayout = () => {
   const [addNewPost, { isLoading: saving, isError: saveError }] =
@@ -122,4 +125,7 @@ TablePage.getLayout = function getLayout(page: ReactElement) {
   return <Layout>{page}</Layout>;
 };
 
-export default TablePage;
+export default withAuthUser<TablePageType>({
+  whenUnauthedBeforeInit: AuthAction.SHOW_LOADER,
+  whenUnauthedAfterInit: AuthAction.REDIRECT_TO_LOGIN,
+})(TablePage);

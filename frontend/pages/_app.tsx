@@ -9,7 +9,9 @@ import type { ReactElement, ReactNode } from "react";
 import type { NextPage } from "next";
 import { Provider } from "react-redux";
 import { makeStore } from "../app/store";
-import { AuthProvider } from "../src/context/AuthContext";
+import initAuth from "../src/initAuth";
+
+initAuth();
 
 const clientSideEmotionCache = createEmotionCache();
 interface MyAppProps extends AppProps {
@@ -26,22 +28,17 @@ function MyApp(props: MyAppProps) {
   const getLayout = Component.getLayout ?? ((page) => page);
   const store = makeStore();
   return getLayout(
-    <AuthProvider>
-      <Provider store={store}>
-        <CacheProvider value={emotionCache}>
-          <Head>
-            <meta
-              name="viewport"
-              content="initial-scale=1, width=device-width"
-            />
-          </Head>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Component {...pageProps} />
-          </ThemeProvider>
-        </CacheProvider>
-      </Provider>
-    </AuthProvider>
+    <Provider store={store}>
+      <CacheProvider value={emotionCache}>
+        <Head>
+          <meta name="viewport" content="initial-scale=1, width=device-width" />
+        </Head>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Component {...pageProps} />
+        </ThemeProvider>
+      </CacheProvider>
+    </Provider>
   );
 }
 

@@ -20,6 +20,8 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import InboxIcon from "@mui/icons-material/MoveToInbox";
 import { getAuth, signOut } from "firebase/auth";
+import { useRouter } from "next/router";
+import { withAuthUser, useAuthUser } from "next-firebase-auth";
 
 type Props = {
   children?: ReactNode;
@@ -27,10 +29,20 @@ type Props = {
 const drawerWidth = 240;
 
 const Layout = ({ children }: Props) => {
-  const logout = async () => {
-    const auth = getAuth();
-    await signOut(auth);
+  const router = useRouter();
+
+  const AuthUser = useAuthUser();
+  const isLogined = AuthUser.id !== null ? true : false;
+  const handleLogin = async () => {
+    if (isLogined) {
+      const auth = getAuth();
+      await signOut(auth);
+      router.push("/");
+    } else {
+      router.push("/auth");
+    }
   };
+
   return (
     <>
       <Box sx={{ flexGrow: 1 }}>
@@ -53,8 +65,8 @@ const Layout = ({ children }: Props) => {
                 <a>LEVAS</a>
               </Link>
             </Typography>
-            <Button color="inherit" onClick={logout}>
-              Logout
+            <Button color="inherit" onClick={handleLogin}>
+              {isLogined ? "Logout" : "Login"}
             </Button>
           </Toolbar>
         </AppBar>
@@ -65,4 +77,4 @@ const Layout = ({ children }: Props) => {
   );
 };
 
-export default Layout;
+export default withAuthUser<Props>()(Layout);
