@@ -21,4 +21,11 @@ export const initializeFirebase = () => {
   // fireorm
   const firestore = admin.firestore();
   fireorm.initialize(firestore);
+
+  if (process.env.NODE_ENV === 'development') {
+    firestore.settings({
+      host: 'localhost:8080',
+      ssl: false,
+    });
+  }
 };

@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { SettingService } from './setting.service';
 import { CreateSettingDto } from './dto/create-setting.dto';
@@ -24,7 +25,8 @@ export class SettingController {
   }
 
   @Get()
-  findAll() {
+  findAll(@Request() req) {
+    const aaa = req.user;
     return this.settingService.findAll('');
   }
 

@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import InboxIcon from "@mui/icons-material/MoveToInbox";
+import { getAuth, signOut } from "firebase/auth";
 
 type Props = {
   children?: ReactNode;
@@ -26,6 +27,10 @@ type Props = {
 const drawerWidth = 240;
 
 const Layout = ({ children }: Props) => {
+  const logout = async () => {
+    const auth = getAuth();
+    await signOut(auth);
+  };
   return (
     <>
       <Box sx={{ flexGrow: 1 }}>
@@ -48,7 +53,9 @@ const Layout = ({ children }: Props) => {
                 <a>LEVAS</a>
               </Link>
             </Typography>
-            <Button color="inherit">Login</Button>
+            <Button color="inherit" onClick={logout}>
+              Logout
+            </Button>
           </Toolbar>
         </AppBar>
       </Box>

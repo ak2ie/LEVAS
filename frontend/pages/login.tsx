@@ -5,19 +5,19 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import styles from "../styles/Home.module.css";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { withAuthUser, AuthAction } from "next-firebase-auth";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import type { NextPageWithLayout } from "./_app";
 import type { ReactElement } from "react";
 import MinimumLayout from "../components/minimumLayout";
+import { useRouter } from "next/router";
 
 interface LoginFormInput {
   email: string;
   password: string;
 }
 
-const Auth: NextPageWithLayout = () => {
+const Login: NextPageWithLayout = () => {
   // フォーム バリデーション
   const schema = yup.object({
     email: yup
@@ -37,6 +37,8 @@ const Auth: NextPageWithLayout = () => {
   const [loading, setLoading] = React.useState(false);
   const [loginError, setLoginError] = React.useState(false);
 
+  const router = useRouter();
+
   // Firebase認証
   const auth = getAuth();
   const onSubmit: SubmitHandler<LoginFormInput> = (data) => {
@@ -44,9 +46,7 @@ const Auth: NextPageWithLayout = () => {
     setLoginError(false);
     signInWithEmailAndPassword(auth, data.email, data.password)
       .then((userCredential) => {
-        // Signed in
-        const user = userCredential.user;
-        // ...
+        router.push("/demo");
       })
       .catch((error) => {
         const errorCode = error.code;
@@ -97,12 +97,8 @@ const Auth: NextPageWithLayout = () => {
   );
 };
 
-Auth.getLayout = function getLayout(page: ReactElement) {
+Login.getLayout = function getLayout(page: ReactElement) {
   return <MinimumLayout>{page}</MinimumLayout>;
 };
 
-export default withAuthUser<LoginFormInput>({
-  whenAuthed: AuthAction.REDIRECT_TO_APP,
-  whenUnauthedBeforeInit: AuthAction.SHOW_LOADER,
-  whenUnauthedAfterInit: AuthAction.RENDER,
-})(Auth);
+export default Login;

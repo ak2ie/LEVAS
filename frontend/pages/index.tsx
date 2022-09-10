@@ -9,6 +9,7 @@ import { send } from "process";
 import Layout from "../components/layout";
 import type { NextPageWithLayout } from "./_app";
 import type { ReactElement } from "react";
+import Link from "next/link";
 
 const Home: NextPageWithLayout = () => {
   const [loading, setLoading] = React.useState(false);
@@ -27,6 +28,9 @@ const Home: NextPageWithLayout = () => {
         <h1 className={styles.title}>
           Learn <a href="https://nextjs.org">Next.js!</a>
         </h1>
+        <Link href="/tablePage">
+          <a>API呼び出しページ</a>
+        </Link>
         <TextField
           id="filled-basic"
           label="項目1"
