@@ -1,23 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty } from 'class-validator';
-
-export class CreateSettingDto {
+import { IsString, IsInt, IsNotEmpty } from 'class-validator';
+export class CreateLineTokenDto {
   /**
    * LINE チャネルID
    */
   @IsString()
   @IsNotEmpty()
   @ApiProperty({
-    description: 'LINE チャネルID',
+    description: 'チャネルID',
   })
   channelID: string;
+
   /**
    * LINE チャネルシークレット
    */
   @IsString()
   @IsNotEmpty()
-  @ApiProperty({
-    description: 'LINE チャネルシークレット',
-  })
+  @ApiProperty()
   channelSecret: string;
 }

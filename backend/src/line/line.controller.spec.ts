@@ -1,5 +1,6 @@
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { CreateLineMessageDto } from './dto/create-lineMessage';
 import { LineController } from './line.controller';
 import { LineService } from './line.service';
 
@@ -19,7 +20,8 @@ describe('LineController', () => {
   });
   describe('findAll', () => {
     it('OK', async () => {
-      const res = await lineService.sendBroadcastMessage('test');
+      const dto = new CreateLineMessageDto();
+      const res = await lineService.sendBroadcastMessage(dto);
       expect(res).toBe('OK');
     });
   });

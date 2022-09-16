@@ -37,9 +37,9 @@ export class LINEAuthGuard extends AuthGuard('line') {
     const userId = request.body.destination;
     const settingRepository = getRepository(Setting);
     const record = await settingRepository
-      //   .whereEqualTo((Setting) => Setting.userId, userId)
-      //   .findOne();
-      .findById(userId);
+      .whereEqualTo((Setting) => Setting.channelID, userId)
+      .findOne();
+    //   .findById(userId);
     if (!record) {
       return false;
     }

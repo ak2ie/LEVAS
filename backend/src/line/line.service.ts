@@ -1,31 +1,54 @@
-import { Injectable } from '@nestjs/common';
-import { Client, middleware, HTTPError } from '@line/bot-sdk';
+import { Injectable, Inject, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Client,
+  middleware,
+  HTTPError,
+  LINE_REQUEST_ID_HTTP_HEADER_NAME,
+} from '@line/bot-sdk';
 import { ConfigService } from '@nestjs/config';
 import { WebhookEvent } from './webhookEvent';
+import { getRepository } from 'fireorm';
+import Setting from '../firestore/setting';
+import { CreateSettingDto } from 'src/setting/dto/create-setting.dto';
+import { CreateLineDto } from './dto/create-line.dto';
+import { CreateLineMessageDto } from './dto/create-lineMessage';
+import { CreateLineTokenDto } from './dto/create-lineToken';
 
 @Injectable()
+// @UsePipes(ValidationPipe)
 export class LineService {
   /**
-   * LINE Client
+   * コンストラクタ
+   * @param client LINE Client
    */
-  private client: Client;
-
-  constructor(private configService: ConfigService) {
-    const config = {
-      channelAccessToken: this.configService.get<string>(
-        'ENV_LINE_CHANNEL_ACCESS_TOKEN',
-      ),
-      channelSecret: this.configService.get<string>('ENV_LINE_CHANNEL_SECRET'),
-    };
-
-    this.client = new Client(config);
-    middleware(config);
-  }
+  constructor(private client: Client) {}
 
   /**
    * 全員にメッセージ送信
    */
-  async sendBroadcastMessage(text: string) {
+  async sendBroadcastMessage(createLineMessageDto: CreateLineMessageDto) {
+    // await this.client.broadcast({
+    //   type: 'template',
+    //   altText: createLineMessageDto.message,
+    //   template: {
+    //     type: 'confirm',
+    //     text: createLineMessageDto.message,
+    //     actions: [
+    //       {
+    //         type: 'postback',
+    //         label: createLineMessageDto.leftButtonLabel,
+    //         data: '',
+    //         displayText: '送信しました',
+    //       },
+    //       {
+    //         type: 'postback',
+    //         label: createLineMessageDto.rightButtonLabel,
+    //         data: '',
+    //         displayText: '送信しました',
+    //       },
+    //     ],
+    //   },
+    // });
     return 'OK';
   }
 
@@ -34,6 +57,29 @@ export class LineService {
    */
   async receiveMessageHander(events: WebhookEvent) {
     return events.message;
+  }
+
+  /**
+   * LINEチャネルID・アクセストークンを保存する
+   * @param createLineTokenDto
+   */
+  async saveToken(createLineTokenDto: CreateLineTokenDto) {
+    const settingRepository = getRepository(Setting);
+    const record = await settingRepository
+      .whereEqualTo(
+        (Setting) => Setting.channelID,
+        createLineTokenDto.channelID,
+      )
+      .findOne();
+    const setting = new Setting();
+    setting.channelID = createLineTokenDto.channelID;
+    setting.channelSecret = createLineTokenDto.channelSecret;
+    setting.userId = '';
+    if (!record) {
+      await settingRepository.create(setting);
+    } else {
+      await settingRepository.update(setting);
+    }
   }
 
   async sample(text: string) {

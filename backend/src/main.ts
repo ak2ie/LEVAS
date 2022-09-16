@@ -4,13 +4,17 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { initializeFirebase } from './firebase';
 import * as bodyParser from 'body-parser';
+import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
 
 async function bootstrap() {
   initializeFirebase();
 
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
+    bufferLogs: true,
   });
+
+  app.use(helmet());
 
   const rawBodyBuffer = (req, res, buf, encoding) => {
     if (buf && buf.length) {
@@ -25,14 +29,16 @@ async function bootstrap() {
   app.use(bodyParser.json({ verify: rawBodyBuffer }));
 
   app.enableCors();
-  app.use(helmet());
 
+  app.useLogger(app.get(Logger));
+  app.useGlobalInterceptors(new LoggerErrorInterceptor());
   /* ------------------------------------------------------------
    * Swagger
    * ------------------------------------------------------------*/
   const config = new DocumentBuilder()
     .setTitle('LEVAS API')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

@@ -1,15 +1,14 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { logger } from './middlewares/logger.middleware';
 import { FireormModule } from 'nestjs-fireorm';
-import { UsersModule } from './users.module';
-import { UserController } from './users.controller';
 import { ConfigModule } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { LineModule } from './line/line.module';
 import { SettingModule } from './setting/setting.module';
 import { AuthModule } from './auth/auth.module';
+import { EventsModule } from './events/events.module';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
@@ -20,16 +19,44 @@ import { AuthModule } from './auth/auth.module';
         fireormSettings: { validateModels: true },
       }),
     }),
-    UsersModule,
     LineModule,
     SettingModule,
     AuthModule,
+    EventsModule,
+    LoggerModule.forRoot({
+      pinoHttp: {
+        customProps: (req, res) => ({
+          context: 'HTTP',
+        }),
+        transport: {
+          target: 'pino-pretty',
+          options:
+            process.env.NODE_ENV === 'development'
+              ? {
+                  singleLine: true,
+                  colorize: true,
+                  levelFirst: true,
+                }
+              : {},
+        },
+        serializers: {
+          req: (req) => {
+            req.body = req.raw.body;
+            return req;
+          },
+          res: (res) => {
+            res.body = res.payload;
+            return res;
+          },
+        },
+      },
+    }),
   ],
-  controllers: [AppController, UserController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(logger).forRoutes(AppController);
-  }
+  //   configure(consumer: MiddlewareConsumer) {
+  //     consumer.apply(logger).forRoutes(AppController);
+  //   }
 }

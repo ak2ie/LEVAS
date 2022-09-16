@@ -22,6 +22,7 @@ export const initializeFirebase = () => {
   const firestore = admin.firestore();
   fireorm.initialize(firestore);
 
+  // エミュレータ
   if (process.env.NODE_ENV === 'development') {
     firestore.settings({
       host: 'localhost:8080',

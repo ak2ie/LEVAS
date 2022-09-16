@@ -1,5 +1,5 @@
 import { Collection } from 'fireorm';
-import Answer from './answer';
+import Event from './event';
 import User from './user';
 
 @Collection()
@@ -18,10 +18,10 @@ export default class Setting {
    */
   accessToken: string;
   /**
-   * ユーザーID
+   * Firebase ユーザーID
    */
   userId: string;
   users: Array<User>;
-  events: Array<Answer>;
+  events: Array<Event>;
   createdAt: Date;
 }
