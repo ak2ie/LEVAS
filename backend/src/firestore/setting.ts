@@ -1,4 +1,4 @@
-import { Collection } from 'fireorm';
+import { Collection, ISubCollection, SubCollection } from 'fireorm';
 import Event from './event';
 import User from './user';
 
@@ -20,8 +20,22 @@ export default class Setting {
   /**
    * Firebase ユーザーID
    */
-  userId: string;
-  users: Array<User>;
-  events: Array<Event>;
+  userFirebaseId: string;
+
+  /**
+   * ユーザー一覧
+   */
+  @SubCollection(User)
+  users?: ISubCollection<User>;
+
+  /**
+   * イベント一覧
+   */
+  @SubCollection(Event)
+  events?: ISubCollection<Event>;
+
+  /**
+   * 作成日
+   */
   createdAt: Date;
 }

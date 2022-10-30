@@ -28,7 +28,7 @@ const Home: NextPageWithLayout = () => {
         <h1 className={styles.title}>
           Learn <a href="https://nextjs.org">Next.js!</a>
         </h1>
-        <Link href="/tablePage">
+        <Link href="/events">
           <a>API呼び出しページ</a>
         </Link>
         <TextField

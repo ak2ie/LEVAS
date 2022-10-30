@@ -8,6 +8,7 @@ export class CreateEventDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'LINE 送信テキスト',
+    maxLength: 240, // https://developers.line.biz/ja/reference/messaging-api/#confirm
   })
   message: string;
 
@@ -18,6 +19,7 @@ export class CreateEventDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'LINE 左側ボタンラベル名',
+    maxLength: 20, // https://developers.line.biz/ja/reference/messaging-api/#postback-action
   })
   leftButtonLabel: string;
 
@@ -28,6 +30,7 @@ export class CreateEventDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'LINE 右側ボタンラベル名',
+    maxLength: 20, // https://developers.line.biz/ja/reference/messaging-api/#postback-action
   })
   rightButtonLabel: string;
 
@@ -38,6 +41,7 @@ export class CreateEventDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'イベント名',
+    maxLength: 100,
   })
   eventName: string;
 }

@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { getRepository } from 'fireorm';
+import { FirestoreOperators, getRepository } from 'fireorm';
 import Setting from '../firestore/setting';
 import { CreateEventDto } from './dto/create-event.dto';
-import { ResponseEventDto } from './dto/read-event.dto';
+import { Answer, EventDetail, ResponseEventDto } from './dto/read-event.dto';
 import { ResponseEventListDto } from './dto/response-events.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { getFirestore } from 'firebase-admin/firestore';
+import { Query } from '@google-cloud/firestore';
+import Event from 'src/firestore/event';
 
 @Injectable()
 export class EventsService {
@@ -16,7 +19,7 @@ export class EventsService {
   async create(userId: string, createEventDto: CreateEventDto) {
     const settingRepository = getRepository(Setting);
     const record = await settingRepository
-      .whereEqualTo((Setting) => Setting.userId, userId)
+      .whereEqualTo((Setting) => Setting.userFirebaseId, userId)
       .findOne();
     if (!record) {
       throw new Error('ユーザー取得失敗');
@@ -24,9 +27,15 @@ export class EventsService {
 
     // TODO: LINE送信
 
-    record.events.push({});
+    // record.events.push({});
 
-    settingRepository.update(record);
+    const event = new Event();
+    event.eventName = createEventDto.eventName;
+    event.leftButtonLabel = createEventDto.leftButtonLabel;
+    event.rightButtonLabel = createEventDto.rightButtonLabel;
+    event.message = createEventDto.message;
+    event.createdAt = new Date();
+    await record.events.create(event);
   }
 
   /**
@@ -37,19 +46,19 @@ export class EventsService {
   async findAll(userId: string): Promise<ResponseEventListDto> {
     const settingRepository = getRepository(Setting);
     const record = await settingRepository
-      .whereEqualTo((Setting) => Setting.userId, userId)
+      .whereEqualTo((Setting) => Setting.userFirebaseId, userId)
       .findOne();
     if (!record) {
       throw new Error('ユーザー取得失敗');
     }
+
+    const events = await record.events.find();
     const res = new ResponseEventListDto();
-    record.events.map((event) => {
-      res.events.push({
-        eventID: event.eventID,
-        eventName: event.eventName,
-        createdAt: event.createdAt,
-      });
-    });
+    res.events = events.map((event) => ({
+      eventName: event.eventName,
+      eventID: event.id,
+      createdAt: event.createdAt,
+    }));
     return res;
   }
 
@@ -60,28 +69,43 @@ export class EventsService {
    * @returns イベント情報
    */
   async findOne(userId: string, eventId: string): Promise<ResponseEventDto> {
+    /* --------------------------------------------------------------------------
+     * DBデータ取得
+     * -------------------------------------------------------------------------- */
     const settingRepository = getRepository(Setting);
     const record = await settingRepository
-      .whereEqualTo((Setting) => Setting.userId, userId)
+      .whereEqualTo((Setting) => Setting.userFirebaseId, userId)
       .findOne();
     if (!record) {
       throw new Error('ユーザー取得失敗');
     }
 
-    const event = record.events.filter((event) => event.eventID === eventId);
-    if (event.length === 0) {
+    const event = await record.events.findById(eventId);
+    if (!event) {
       throw new Error('イベント取得失敗');
     }
+
+    const answers = await event.answers.find();
+
+    /* --------------------------------------------------------------------------
+     * データ整形
+     * -------------------------------------------------------------------------- */
     const dto = new ResponseEventDto();
-    dto.message = event[0].message;
-    dto.leftButtonLabel = event[0].leftButtonLabel;
-    dto.rightButtonLabel = event[0].rightButtonLabel;
-    dto.answers = event[0].answers.map((answer) => {
-      return {
-        Attendance: answer.answer,
-        userName: answer.userName,
-        date: answer.createdAt,
-      };
+    const dtoEvent = new EventDetail();
+    dto.event = dtoEvent;
+    if (answers.length === 0) {
+      return dto;
+    }
+
+    dtoEvent.message = event.message;
+    dtoEvent.leftButtonLabel = event.leftButtonLabel;
+    dtoEvent.rightButtonLabel = event.rightButtonLabel;
+    dtoEvent.answers = answers.map((answer) => {
+      const dtoAnswer = new Answer();
+      dtoAnswer.Attendance = answer.answer;
+      dtoAnswer.userName = answer.userName;
+      dtoAnswer.date = answer.createdAt;
+      return dtoAnswer;
     });
     return dto;
   }

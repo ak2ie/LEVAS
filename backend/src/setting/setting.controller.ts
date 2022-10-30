@@ -16,13 +16,24 @@ import {
 import { SettingService } from './setting.service';
 import { CreateSettingDto } from './dto/create-setting.dto';
 import { FirebaseAuthGuard } from '../auth/firebase.guard';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiExtraModels,
+  ApiHeader,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { UpdateFriendDto } from './dto/update-friend.dto';
 import { DecodedIdToken } from 'firebase-admin/auth';
+import { ReponseFriendDto, ReponseFriendItem } from './dto/response-friend.dto';
+import { boolean } from 'joi';
 
-@Controller('setting')
+@Controller('settings')
 @UseGuards(FirebaseAuthGuard)
 @ApiTags('設定')
+@ApiBearerAuth()
 @ApiHeader({
   name: 'Bearer',
   description: 'Firebase IDトークン',
@@ -41,6 +52,26 @@ export class SettingController {
   @ApiOperation({
     description: 'LINE チャネルID・トークンを保存する',
   })
+  @ApiResponse({
+    status: 201,
+    description: '正常登録',
+  })
+  @ApiResponse({
+    status: 400,
+    content: {
+      'application/json': {
+        examples: {
+          bodyInvalid: {
+            description: 'チャネルID・シークレットが不正',
+            value: {
+              result: false,
+              reason: 'Channel ID, Secret is InValid',
+            },
+          },
+        },
+      },
+    },
+  })
   async saveToken(
     @Request() req: Request & { user: DecodedIdToken },
     @Body() dto: CreateSettingDto,
@@ -56,6 +87,23 @@ export class SettingController {
   @ApiOperation({
     description: 'LINE チャネルID・トークンを保存済みであるかを返す',
   })
+  @ApiResponse({
+    status: 200,
+    content: {
+      'application/json': {
+        examples: {
+          saved: {
+            description: '保存済',
+            value: { result: true },
+          },
+          notSaved: {
+            description: '未保存',
+            value: { result: false },
+          },
+        },
+      },
+    },
+  })
   async getToken(
     @Request() req: Request & { user: DecodedIdToken },
   ): Promise<{ result: boolean }> {
@@ -67,7 +115,7 @@ export class SettingController {
    * 友だちの情報を更新する
    * @returns
    */
-  @Post('friend')
+  @Post('friends')
   @UsePipes(ValidationPipe)
   @ApiOperation({
     description: '友だち情報を更新する',
@@ -77,5 +125,52 @@ export class SettingController {
     @Body() dto: UpdateFriendDto,
   ) {
     await this.settingService.updateFriendInfo(req.user.uid, dto);
+  }
+
+  @Get('friends')
+  @UsePipes(ValidationPipe)
+  @ApiOperation({
+    description: '友だち一覧を取得する',
+  })
+  @ApiExtraModels(ReponseFriendDto)
+  @ApiResponse({
+    status: 200,
+    content: {
+      'application/json': {
+        schema: {
+          $ref: getSchemaPath(ReponseFriendDto),
+        },
+        examples: {
+          noFriend: {
+            value: { friends: [] },
+            description: '友だちなし',
+          },
+          friends: {
+            description: '友だちあり',
+            value: {
+              friends: [
+                {
+                  userID: 'userID1',
+                  userName: 'ユーザー名1',
+                  memo: 'メモ1',
+                  imgUrl: 'https://example.com/img.jpg',
+                  lineUserName: 'LINEユーザー名1',
+                },
+                {
+                  userID: 'userID2',
+                  userName: 'ユーザー名2',
+                  memo: 'メモ2',
+                  imgUrl: '',
+                  lineUserName: 'LINEユーザー名2',
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  })
+  async getFriends(@Request() req: Request & { user: DecodedIdToken }) {
+    return await this.settingService.getFriends(req.user.uid);
   }
 }

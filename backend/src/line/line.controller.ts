@@ -2,36 +2,19 @@ import {
   Body,
   Controller,
   HttpCode,
-  Param,
   Post,
   UseGuards,
   Inject,
   UsePipes,
   ValidationPipe,
-  Get,
 } from '@nestjs/common';
 import { LineService } from './line.service';
-import {
-  ApiBearerAuth,
-  ApiHeader,
-  ApiOperation,
-  ApiParam,
-  ApiProperty,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LINEAuthGuard } from 'src/auth/line.guard';
-import { Client } from '@line/bot-sdk';
-import { getRepository } from 'fireorm';
-import Setting from 'src/firestore/setting';
-import { CreateLineDto } from './dto/create-line.dto';
-import { CreateLineMessageDto } from './dto/create-lineMessage';
-import { FirebaseAuthGuard } from 'src/auth/firebase.guard';
-import { CreateLineTokenDto } from './dto/create-lineToken';
+import { CreateLineDto, LINEEventType } from './dto/create-line.dto';
 
 @ApiTags('LINE')
 @Controller('line')
-@ApiBearerAuth()
 export class LineController {
   constructor(@Inject('LINE') private readonly lineService: LineService) {}
 
@@ -48,12 +31,40 @@ export class LineController {
       'LINEプラットフォームから送信されたことを確認するための署名（x-line-signatureでも可）',
   })
   @ApiOperation({
-    description: 'LINEサーバーから呼び出される',
+    description: 'LINEからWebhookで呼び出される',
   })
-  async findAll(
-    @Body() body: CreateLineDto,
-  ): Promise<{ [key: string]: string }> {
-    // await this.lineService.sendBroadcastMessage(body);
-    return { 'This action returns all cats': '' };
+  async findAll(@Body() body: CreateLineDto): Promise<void> {
+    if (body.events.length === 0) {
+      // 疎通確認用
+      return;
+    }
+
+    for (const event of body.events) {
+      switch (event.type) {
+        // メッセージ受信
+        case 'message':
+          await this.lineService.receiveMessageHander(event);
+          break;
+
+        // メッセージ内ボタン押下
+        case 'postback':
+          await this.lineService.postbackHander(body.destination, event);
+          break;
+
+        // 友だち登録
+        case 'follow':
+          await this.lineService.followHander(body.destination, event);
+          break;
+
+        // 友だち解除
+        case 'unfollow':
+          await this.lineService.unfollowHander(body.destination, event);
+          break;
+
+        default:
+          break;
+      }
+    }
+    return;
   }
 }

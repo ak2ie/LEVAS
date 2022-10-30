@@ -4,7 +4,7 @@
 
 ```
 # 初回のみ
-$ yarn install
+$ yarn
 
 # 開発
 $ yarn start:debug
@@ -33,5 +33,5 @@ $ curl http://localhost:3000/api-json > spec.json
 # ここで、Swaggerは停止してOK
 
 # モックAPIサーバを起動
-$ yarn prism mock spec.json
+$ yarn mock
 ```

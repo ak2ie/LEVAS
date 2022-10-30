@@ -1,6 +1,10 @@
 import { IsString, IsNotEmpty, isArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { EventItem } from './response-events.dto';
 
+/**
+ * イベント回答
+ */
 export class Answer {
   /**
    * ユーザー名
@@ -28,7 +32,10 @@ export class Answer {
   date: Date;
 }
 
-export class ResponseEventDto {
+/**
+ * イベント詳細
+ */
+export class EventDetail {
   /**
    * LINE 送信テキスト
    */
@@ -61,24 +68,22 @@ export class ResponseEventDto {
    */
   @ApiProperty({
     description: '出席一覧',
-    type: [Answer],
-    example: [
-      {
-        userName: 'ユーザーA',
-        Attendance: '参加しない',
-        date: new Date(2022, 5, 4),
-      },
-      {
-        userName: 'ユーザーB',
-        Attendance: '参加する',
-        date: new Date(2022, 5, 6),
-      },
-      {
-        userName: 'ユーザーC',
-        Attendance: '参加する',
-        date: new Date(2022, 5, 10),
-      },
-    ],
+    type: Answer,
+    isArray: true,
   })
   answers: Array<Answer>;
+}
+
+/**
+ * 個別イベントレスポンス
+ */
+export class ResponseEventDto {
+  /**
+   * イベント詳細
+   */
+  @ApiProperty({
+    description: 'イベント詳細',
+    type: EventDetail,
+  })
+  event: EventDetail;
 }

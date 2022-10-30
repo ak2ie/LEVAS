@@ -1,52 +1,224 @@
+import { HttpModule, HttpService } from '@nestjs/axios';
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  IFirestoreVal,
+  IQueryBuilder,
+  ISubCollection,
+  IWherePropParam,
+} from 'fireorm';
+import { of, throwError } from 'rxjs';
+import Answer from 'src/firestore/answer';
 import Event from 'src/firestore/event';
 import User from 'src/firestore/user';
+import { LineService } from 'src/line/line.service';
 import Setting from '../firestore/setting';
 import { CreateSettingDto } from './dto/create-setting.dto';
 import { UpdateFriendDto } from './dto/update-friend.dto';
 import { SettingService } from './setting.service';
+import { AxiosResponse, AxiosError } from 'axios';
 
 const dummyVal = new Setting();
 const createFunc = jest.fn();
 const findOneMock = jest.fn();
 const updateMock = jest.fn();
+const batchUpdateMock = jest.fn();
+const whereEqualToMock = jest.fn();
 jest.mock('fireorm', () => {
   return {
     Collection: () => jest.fn(),
+    SubCollection: () => jest.fn(),
     getRepository: () => ({
       create: createFunc,
-      whereEqualTo: (prop: any, val: any) => {
-        return {
-          findOne: findOneMock,
-        };
-      },
+      whereEqualTo: whereEqualToMock,
+      // (prop: any, val: any) => {
+      //   return {
+      //     findOne: findOneMock,
+      //   };
+      // },
       update: updateMock,
+    }),
+    createBatch: () => ({
+      getRepository: () => ({
+        update: batchUpdateMock,
+      }),
+      commit: () => jest.fn(),
     }),
   };
 });
 
 describe('チャネルID・シークレット登録', () => {
   let service: SettingService;
+  let httpService: HttpService;
+  let mockHttpService;
 
   beforeEach(async () => {
+    mockHttpService = {
+      post: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SettingService],
+      // imports: [HttpModule],
+      providers: [
+        SettingService,
+        {
+          provide: HttpService,
+          useValue: mockHttpService,
+        },
+      ],
     }).compile();
 
     service = module.get<SettingService>(SettingService);
+    // httpService = module.get<HttpService>(HttpService);
+
+    jest.useFakeTimers();
+    const mockDate = new Date(2020, 2, 5);
+    jest.setSystemTime(mockDate);
   });
 
-  it('正常', async () => {
+  afterEach(() => {
+    jest.useRealTimers();
+    mockHttpService.post.mockReset();
+    createFunc.mockReset();
+    updateMock.mockReset();
+    whereEqualToMock.mockReset();
+  });
+
+  it('正常（新規）', async () => {
+    /* --------------------------------------------------------------------------
+     * テスト準備
+     * -------------------------------------------------------------------------- */
+    // LINEサーバーモック（正常）
+    const response: AxiosResponse<any> = {
+      data: {
+        access_token: 'dummy_accessToken', // アクセストークン
+        expires_in: 2592000,
+        token_type: 'Bearer',
+      },
+      headers: {},
+      config: { url: 'https://api.line.me/v2/oauth/accessToken' },
+      status: 200,
+      statusText: 'OK',
+    };
+    mockHttpService.post.mockImplementation(() => of(response));
+
+    // DB
+    whereEqualToMock.mockImplementation((prop: any, val: any) => ({
+      findOne: () =>
+        new Promise((resolve) => {
+          if (val === 'dummy_FirebaseId') {
+            // 対象ユーザーIDは未登録
+            resolve(null);
+          } else {
+            // 対象ユーザーID以外は登録済
+            resolve(new Setting());
+          }
+        }),
+    }));
+
     const dto = new CreateSettingDto();
     dto.channelID = 'dummy_channelID';
     dto.channelSecret = 'dummy_channelSecret';
-    await service.saveChannelIDAndSecret('dummyId', dto);
 
+    await service.saveChannelIDAndSecret('dummy_FirebaseId', dto);
+
+    /* --------------------------------------------------------------------------
+     * 検証
+     * -------------------------------------------------------------------------- */
     const expected = new Setting();
-    expected.channelID = dto.channelID;
-    expected.channelSecret = dto.channelSecret;
-    expected.userId = 'dummyId';
+    expected.channelID = 'dummy_channelID';
+    expected.channelSecret = 'dummy_channelSecret';
+    expected.userFirebaseId = 'dummy_FirebaseId';
+    expected.accessToken = 'dummy_accessToken';
+    expected.createdAt = new Date();
     expect(createFunc).toHaveBeenCalledWith(expected);
+
+    expect(mockHttpService.post).toBeCalled();
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('正常（更新）', async () => {
+    /* --------------------------------------------------------------------------
+     * テスト準備
+     * -------------------------------------------------------------------------- */
+    // LINEサーバーモック（正常）
+    const response: AxiosResponse<any> = {
+      data: {
+        access_token: 'dummy_accessToken', // アクセストークン
+        expires_in: 2592000,
+        token_type: 'Bearer',
+      },
+      headers: {},
+      config: { url: 'https://api.line.me/v2/oauth/accessToken' },
+      status: 200,
+      statusText: 'OK',
+    };
+    mockHttpService.post.mockImplementation(() => of(response));
+
+    // DB
+    whereEqualToMock.mockImplementation((prop: any, val: any) => ({
+      findOne: () => {
+        if (val === 'dummy_FirebaseId') {
+          // 対象ユーザーIDは登録済
+          return new Promise((resolve) => {
+            const setting = new Setting();
+            setting.accessToken = 'oldToken';
+            resolve(setting);
+          });
+        } else {
+          // 対象ユーザーID以外は未登録
+          return new Promise((resolve) => {
+            resolve(null);
+          });
+        }
+      },
+    }));
+
+    const dto = new CreateSettingDto();
+    dto.channelID = 'dummy_channelID';
+    dto.channelSecret = 'dummy_channelSecret';
+
+    await service.saveChannelIDAndSecret('dummy_FirebaseId', dto);
+
+    /* --------------------------------------------------------------------------
+     * 検証
+     * -------------------------------------------------------------------------- */
+    const expected = new Setting();
+    expected.channelID = 'dummy_channelID';
+    expected.channelSecret = 'dummy_channelSecret';
+    expected.accessToken = 'dummy_accessToken';
+    expect(updateMock).toHaveBeenCalledWith(expected);
+
+    expect(mockHttpService.post).toBeCalled();
+
+    expect(createFunc).not.toHaveBeenCalled();
+  });
+
+  it('異常（トークン取得失敗）', async () => {
+    /* --------------------------------------------------------------------------
+     * テスト準備
+     * -------------------------------------------------------------------------- */
+    const dto = new CreateSettingDto();
+    dto.channelID = 'dummy_channelID';
+    dto.channelSecret = 'dummy_channelSecret';
+
+    // LINEサーバーモック（エラー）
+    const error: AxiosError<any> = {
+      code: '400',
+      config: {},
+      isAxiosError: true,
+      message: '',
+      name: '',
+      toJSON: () => null,
+    };
+    mockHttpService.post = jest.fn(() => throwError(() => error));
+
+    /* --------------------------------------------------------------------------
+     * 検証
+     * -------------------------------------------------------------------------- */
+    await expect(
+      service.saveChannelIDAndSecret('dummy_FirebaseId', dto),
+    ).rejects.toThrow();
   });
 });
 
@@ -55,6 +227,7 @@ describe('チャネルID・シークレット登録有無の取得', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [HttpModule],
       providers: [SettingService],
     }).compile();
 
@@ -62,36 +235,75 @@ describe('チャネルID・シークレット登録有無の取得', () => {
   });
 
   it('登録済', async () => {
-    dummyVal.channelID = 'aaa';
-    dummyVal.channelSecret = 'bbb';
-    findOneMock.mockReturnValue(
-      new Promise((resolve) => {
-        resolve(dummyVal);
-      }),
+    whereEqualToMock.mockImplementation((prop: any, val: any) => ({
+      findOne: () => {
+        if (val === 'dummy_FirebaseId') {
+          // 対象ユーザーIDは登録済
+          return new Promise((resolve) => {
+            const setting = new Setting();
+            setting.channelID = 'dummy_channelID';
+            setting.channelSecret = 'dummy_channelSecret';
+            resolve(setting);
+          });
+        } else {
+          // 対象ユーザーID以外は未登録
+          return new Promise((resolve) => {
+            resolve(null);
+          });
+        }
+      },
+    }));
+
+    expect(await service.getIsSavedChannelIDAndSecret('dummy_FirebaseId')).toBe(
+      true,
     );
-    expect(await service.getIsSavedChannelIDAndSecret('dummyId')).toBe(true);
   });
 
-  it('未登録', async () => {
-    dummyVal.channelID = '';
-    dummyVal.channelSecret = '';
-    findOneMock.mockReturnValue(
-      new Promise((resolve) => {
-        resolve(dummyVal);
-      }),
+  it('ユーザー未登録', async () => {
+    whereEqualToMock.mockImplementation((prop: any, val: any) => ({
+      findOne: () => {
+        return new Promise((resolve) => {
+          if (val === 'dummy_FirebaseId') {
+            // 対象ユーザーIDは未登録
+            resolve(null);
+          } else {
+            const setting = new Setting();
+            // 対象ユーザーID以外は登録済
+            setting.channelID = 'dummy';
+            setting.channelSecret = 'dummy';
+            resolve(setting);
+          }
+        });
+      },
+    }));
+
+    expect(await service.getIsSavedChannelIDAndSecret('dummy_FirebaseId')).toBe(
+      false,
     );
-    expect(await service.getIsSavedChannelIDAndSecret('dummyId')).toBe(false);
   });
 
-  it('ユーザー取得失敗', async () => {
-    findOneMock.mockReturnValue(
-      new Promise((resolve) => {
-        resolve(null);
-      }),
+  it('チャネルID・シークレット未登録', async () => {
+    whereEqualToMock.mockImplementation((prop: any, val: any) => ({
+      findOne: () => {
+        return new Promise((resolve) => {
+          const setting = new Setting();
+          if (val === 'dummy_FirebaseId') {
+            // 対象ユーザーIDは未登録
+            setting.channelID = '';
+            setting.channelSecret = '';
+          } else {
+            // 対象ユーザーID以外は登録済
+            setting.channelID = 'dummy';
+            setting.channelSecret = 'dummy';
+          }
+          resolve(setting);
+        });
+      },
+    }));
+
+    expect(await service.getIsSavedChannelIDAndSecret('dummy_FirebaseId')).toBe(
+      false,
     );
-    await expect(
-      service.getIsSavedChannelIDAndSecret('dummyId'),
-    ).rejects.toThrow();
   });
 });
 
@@ -100,6 +312,7 @@ describe('友だち更新', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [HttpModule],
       providers: [SettingService],
     }).compile();
 
@@ -110,6 +323,7 @@ describe('友だち更新', () => {
     createFunc.mockReset();
     findOneMock.mockReset();
     updateMock.mockReset();
+    batchUpdateMock.mockReset();
   });
 
   it('正常', async () => {
@@ -118,107 +332,133 @@ describe('友だち更新', () => {
     dto.userName = 'newFriendName';
     dto.memo = 'memo';
 
-    findOneMock.mockReturnValue(
-      new Promise((resolve) => {
-        resolve(friendData);
-      }),
-    );
+    const updateFriendMock = updateFriendData();
 
-    let update: { users: Array<User>; events: Array<Event> };
-    updateMock.mockImplementation((updateData) => {
-      update = updateData;
-    });
+    // Settingsコレクション
+    whereEqualToMock.mockImplementation((prop: any, val: any) => ({
+      findOne: () => {
+        return new Promise((resolve) => {
+          if (val === 'dummyAdminId') {
+            // 対象ユーザーIDは登録済
+            resolve(updateFriendMock);
+          } else {
+            // 対象ユーザーID以外は未登録
+            resolve(null);
+          }
+        });
+      },
+    }));
 
     // 処理実行
-    await service.updateFriendInfo('dummyAdminId', 'dummyFriendId', dto);
+    await service.updateFriendInfo('dummyAdminId', dto);
 
     // ユーザー情報の名前が更新されること
-    update.users.map((user) => {
-      if (user.userID === 'dummyFriendId') {
-        expect(user.userName).toBe(dto.userName);
-      }
+    expect(updateFriendMock.users.update).toHaveBeenCalledWith({
+      id: 'dummyFriendId',
+      userName: 'newFriendName',
+      lineID: '',
+      lineUserName: '',
+      memo: 'memo',
+      createdAt: new Date(2022, 8, 10),
+      imgUrl: '',
     });
 
     // 参加登録の名前が更新されること
-    update.events.map((event) => {
-      event.answers.map((answer) => {
-        if (answer.userID === 'dummyFriendId') {
-          expect(answer.userName).toBe(dto.userName);
-        }
-      });
+    expect(batchUpdateMock).toHaveBeenCalledWith({
+      userFirebaseId: 'dummyFriendId',
+      userName: 'newFriendName',
+      id: '',
+      answer: '',
+      createdAt: new Date(2022, 8, 10),
     });
   });
 });
 
-const friendData: { users: Array<User>; events: Array<Event> } = {
-  users: [
+function updateFriendData() {
+  // ユーザー
+  const users = {} as unknown;
+  const usersMock = users as ISubCollection<User>;
+  usersMock.findById = jest.fn();
+  usersMock.update = jest.fn(); // 結果確認用
+
+  jest.spyOn(usersMock, 'findById').mockImplementation((id) => {
+    return new Promise((resolve) => {
+      resolve(
+        id === 'dummyFriendId'
+          ? {
+              memo: '',
+              userName: 'oldFriendName',
+              id: 'dummyFriendId',
+              lineID: '',
+              createdAt: new Date(2022, 8, 10),
+              lineUserName: '',
+              imgUrl: '',
+            }
+          : undefined,
+      );
+    });
+  });
+
+  // 参加可否
+  const answers = {} as unknown;
+  const answersMock = answers as ISubCollection<Answer>;
+  answersMock.whereEqualTo = jest.fn();
+
+  jest
+    .spyOn(answersMock, 'whereEqualTo')
+    .mockImplementation((prop: IWherePropParam<Answer>, val: IFirestoreVal) => {
+      const queryBuilder = {} as unknown;
+      const queryBuilderMock = queryBuilder as IQueryBuilder<Answer>;
+      queryBuilderMock.find = jest.fn();
+
+      jest.spyOn(queryBuilderMock, 'find').mockImplementation(() => {
+        return new Promise((resolve) => {
+          const answers = [
+            {
+              userFirebaseId: 'dummyFriendId',
+              userName: 'oldFriendName',
+              id: '',
+              answer: '',
+              createdAt: new Date(2022, 8, 10),
+            },
+            {
+              userFirebaseId: 'dummyOtherFriendId',
+              userName: 'otherFriendName',
+              id: '',
+              answer: '',
+              createdAt: new Date(2022, 8, 10),
+            },
+          ];
+
+          const answer = answers.filter(
+            (answer) => answer.userFirebaseId === val.toString(),
+          );
+          resolve(answer);
+        });
+      });
+
+      return queryBuilderMock;
+    });
+
+  // イベント
+  const events = {} as unknown;
+  const eventsMock = events as ISubCollection<Event>;
+  eventsMock.find = jest.fn();
+
+  jest.spyOn(eventsMock, 'find').mockResolvedValue([
     {
-      userID: 'dummyFriendId',
-      memo: '',
-      userName: 'oldFriendName',
       id: '',
-      lineID: '',
-      createdAt: new Date(),
-    },
-    {
-      userID: 'dummyOtherFriendId',
-      memo: '',
-      userName: 'otherFriendName',
-      id: '',
-      lineID: '',
-      createdAt: new Date(),
-    },
-  ],
-  events: [
-    {
-      id: '',
-      eventID: '',
       eventName: '',
       message: '',
       leftButtonLabel: '',
       rightButtonLabel: '',
-      answers: [
-        {
-          userID: 'dummyFriendId',
-          userName: 'oldFriendName',
-          id: '',
-          answer: '',
-          createdAt: new Date(),
-        },
-        {
-          userID: 'dummyOtherFriendId',
-          userName: 'otherFriendName',
-          id: '',
-          answer: '',
-          createdAt: new Date(),
-        },
-      ],
+      answers: answersMock,
       createdAt: new Date(),
     },
-    {
-      id: '',
-      eventID: '',
-      eventName: '',
-      message: '',
-      leftButtonLabel: '',
-      rightButtonLabel: '',
-      answers: [
-        {
-          userID: 'dummyFriendId',
-          userName: 'oldFriendName',
-          id: '',
-          answer: '',
-          createdAt: new Date(),
-        },
-        {
-          userID: 'dummyOtherFriendId',
-          userName: 'otherFriendName',
-          id: '',
-          answer: '',
-          createdAt: new Date(),
-        },
-      ],
-      createdAt: new Date(),
-    },
-  ],
-};
+  ]);
+
+  return {
+    users: usersMock,
+    events: eventsMock,
+  };
+}

@@ -1,10 +1,28 @@
 import { Collection } from 'fireorm';
 
-@Collection()
+/**
+ * 回答
+ */
 export default class Answer {
   id!: string;
-  userID: string;
+
+  /**
+   * ユーザーID
+   */
+  userFirebaseId: string;
+
+  /**
+   * ユーザー名
+   */
   userName: string;
+
+  /**
+   * 回答
+   */
   answer: string;
+
+  /**
+   * 作成日
+   */
   createdAt: Date;
 }

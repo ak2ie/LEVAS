@@ -60,7 +60,11 @@ const Layout = ({ children }: Props) => {
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            <Typography
+              variant="h1"
+              component="div"
+              sx={{ flexGrow: 1, fontSize: "1.3em", fontWeight: "bold" }}
+            >
               <Link color="inherit" href="/">
                 <a>LEVAS</a>
               </Link>

@@ -19,6 +19,7 @@ export class UpdateFriendDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'ユーザー名',
+    maxLength: 100,
   })
   userName: string;
 
@@ -28,6 +29,7 @@ export class UpdateFriendDto {
   @IsString()
   @ApiProperty({
     description: 'メモ',
+    maxLength: 500,
   })
   memo: string;
 }

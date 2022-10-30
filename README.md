@@ -68,6 +68,20 @@ ENV_FIREBASE_CLIENT_EMAIL=<>
 
 ### 開発
 
+#### Firebase エミュレータ
+
+```bash
+# エミュレータ起動 (levasフォルダ直下で実行)
+$ firebase emulators:start --import ./firebaseEmulator
+```
+
+エミュレータのデータ（ユーザー、DB）をエクスポートするには以下のコマンドを実行する。
+
+```bash
+# エミュレータデータエクスポート (levasフォルダ直下で実行)
+$ firebase emulators:export ./firebaseEmulator
+```
+
 ### デプロイ
 
 - フロントエンド
