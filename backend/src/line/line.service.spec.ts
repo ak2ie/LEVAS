@@ -233,7 +233,7 @@ describe('イベント参加登録', () => {
     whereEqualToMock.mockClear();
   });
 
-  it('登録済ユーザー', async () => {
+  it('登録済ユーザー(初回登録)', async () => {
     /* --------------------------------------------------------------------------
      * テスト準備
      * -------------------------------------------------------------------------- */
@@ -243,6 +243,20 @@ describe('イベント参加登録', () => {
     answersMock.update = jest.fn();
     eventsRecord.answers = answersMock;
 
+    // 参加登録
+    answersMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
+      return {
+        findOne: () => {
+          if (val === 'dummyFirebaseUserId') {
+            return new Promise((resolve) => {
+              resolve(undefined); // 参加は未登録
+            });
+          }
+        },
+      };
+    });
+
+    // イベント
     const events = {} as unknown;
     const eventsMock = events as ISubCollection<Event>;
     eventsMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
@@ -257,6 +271,7 @@ describe('イベント参加登録', () => {
       };
     });
 
+    // ユーザー
     const users = {} as unknown;
     const usersMock = users as ISubCollection<User>;
     usersMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
@@ -289,6 +304,107 @@ describe('イベント参加登録', () => {
       };
     });
 
+    // LINE受信
+    const event = new LINEEvent();
+    const source = new LINESource();
+    source.userId = 'dummyUserId';
+    event.source = source;
+    const postBack = new PostbackEvent();
+    postBack.data = JSON.stringify({ eventID: 'dummyEventID', answer: 'left' });
+    event.postback = postBack;
+
+    /* --------------------------------------------------------------------------
+     * 実行
+     * -------------------------------------------------------------------------- */
+    await service.postbackHander('dummyAdminLINEId', event);
+
+    /* --------------------------------------------------------------------------
+     * 検証
+     * -------------------------------------------------------------------------- */
+    expect(eventsRecord.answers.update).toHaveBeenCalledWith({
+      answer: 'left',
+      userFirebaseId: 'dummyFirebaseUserId',
+      createdAt: new Date(),
+    });
+  });
+
+  it('登録済ユーザー(参加登録済)', async () => {
+    /* --------------------------------------------------------------------------
+     * テスト準備
+     * -------------------------------------------------------------------------- */
+    const eventsRecord = new Event();
+    const answers = {} as unknown;
+    const answersMock = answers as ISubCollection<Answer>;
+    answersMock.update = jest.fn();
+    eventsRecord.answers = answersMock;
+
+    // 参加登録
+    answersMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
+      return {
+        findOne: () => {
+          if (val === 'dummyFirebaseUserId') {
+            return new Promise((resolve) => {
+              const answer = new Answer();
+              answer.answer = 'right';
+              answer.userFirebaseId = 'dummyFirebaseUserId';
+              answer.userName = 'dummyUserName';
+              answer.createdAt = new Date(2020, 1, 1);
+              resolve(answer); // 参加は登録済
+            });
+          }
+        },
+      };
+    });
+
+    // イベント
+    const events = {} as unknown;
+    const eventsMock = events as ISubCollection<Event>;
+    eventsMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
+      return {
+        findOne: () => {
+          if (val === 'dummyEventID') {
+            return new Promise((resolve) => {
+              resolve(eventsRecord);
+            });
+          }
+        },
+      };
+    });
+
+    // ユーザー
+    const users = {} as unknown;
+    const usersMock = users as ISubCollection<User>;
+    usersMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
+      return {
+        findOne: () => {
+          if (val === 'dummyUserId') {
+            return new Promise((resolve) => {
+              const user = new User();
+              user.id = 'dummyFirebaseUserId';
+              resolve(user);
+            });
+          }
+        },
+      };
+    });
+
+    const setting = new Setting();
+    setting.events = eventsMock;
+    setting.users = usersMock;
+
+    whereEqualToMock.mockImplementation((prop, val) => {
+      return {
+        findOne: () => {
+          if (val === 'dummyAdminLINEId') {
+            return new Promise((resolve) => {
+              resolve(setting);
+            });
+          }
+        },
+      };
+    });
+
+    // LINE受信
     const event = new LINEEvent();
     const source = new LINESource();
     source.userId = 'dummyUserId';
@@ -321,6 +437,19 @@ describe('イベント参加登録', () => {
     const answersMock = answers as ISubCollection<Answer>;
     answersMock.update = jest.fn();
     eventsRecord.answers = answersMock;
+
+    // 参加登録
+    answersMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
+      return {
+        findOne: () => {
+          if (val === 'dummyFirebaseUserId') {
+            return new Promise((resolve) => {
+              resolve(undefined); // 参加は未登録
+            });
+          }
+        },
+      };
+    });
 
     const events = {} as unknown;
     const eventsMock = events as ISubCollection<Event>;

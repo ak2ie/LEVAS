@@ -76,6 +76,7 @@ export class LineService {
     }
     const postBack = JSON.parse(event.postback.data);
 
+    // イベント取得
     const eventRecord = await record.events
       .whereEqualTo((Event) => Event.id, postBack['eventID'])
       .findOne();
@@ -83,10 +84,12 @@ export class LineService {
       throw new Error('参加対象のイベント取得失敗');
     }
 
+    // ユーザー取得
     let user = await record.users
       .whereEqualTo((User) => User.lineID, event.source.userId)
       .findOne();
     if (!user) {
+      // 未登録の場合
       await this.followHander(lineId, event);
 
       user = await record.users
@@ -94,10 +97,17 @@ export class LineService {
         .findOne();
     }
 
-    const answer = new Answer();
+    let answer = await eventRecord.answers
+      .whereEqualTo((Answer) => Answer.userFirebaseId, user.id)
+      .findOne();
+    if (!answer) {
+      answer = new Answer();
+    }
     answer.answer = postBack['answer'];
     answer.userFirebaseId = user.id;
     answer.createdAt = new Date();
+    answer.userName = user.userName;
+
     await eventRecord.answers.update(answer);
 
     return event;
