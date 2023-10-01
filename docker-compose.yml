@@ -1,0 +1,19 @@
+services:
+  firebase:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    volumes:
+      - ./:/workspaces
+      - ./docker/firebase/config/:/root/.config:cached # firebase-tools config
+    ports:
+      - 9099:9099 # Firebase Authentication
+      - 5001:5001 # Clound Functions
+      - 8080:8080 # Cloud Firestore
+      - 9000:9000 # Realtime Database
+      - 5000:5000 # Firebase Hosting
+      - 8085:8085 # Cloud Pub/Sub
+      - 9199:9199 # Cloud Storage
+      - 4000:4000 # Emulator Suite UI
+    working_dir: /workspaces
+    tty: true
