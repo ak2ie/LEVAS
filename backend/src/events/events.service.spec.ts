@@ -18,6 +18,11 @@ import {
   ResponseEventDto,
   Answer as AnswerDTO,
 } from './dto/read-event.dto';
+import { LineService } from 'src/line/line.service';
+import { LineModule } from 'src/line/line.module';
+import { Client, MessageAPIResponseBase } from '@line/bot-sdk';
+import { REQUEST } from '@nestjs/core';
+import User from 'src/firestore/user';
 
 const findoneMock = jest.fn();
 const createMock = jest.fn();
@@ -43,7 +48,20 @@ describe('イベント一覧取得', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EventsService],
+      providers: [
+        EventsService,
+        {
+          provide: 'LINE',
+          useFactory: async (req: Request) => {
+            const client = new Client({
+              channelAccessToken: 'dummyToken',
+              channelSecret: 'dummySecret',
+            });
+            return new LineService(client);
+          },
+          inject: [REQUEST],
+        },
+      ],
     }).compile();
 
     service = module.get<EventsService>(EventsService);
@@ -95,7 +113,20 @@ describe('個別イベント取得', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EventsService],
+      providers: [
+        EventsService,
+        {
+          provide: 'LINE',
+          useFactory: async (req: Request) => {
+            const client = new Client({
+              channelAccessToken: 'dummyToken',
+              channelSecret: 'dummySecret',
+            });
+            return new LineService(client);
+          },
+          inject: [REQUEST],
+        },
+      ],
     }).compile();
 
     service = module.get<EventsService>(EventsService);
@@ -139,6 +170,80 @@ describe('個別イベント取得', () => {
     expect(await service.findOne('dummyUserId', 'dummyEventId')).toEqual(
       expected,
     );
+  });
+});
+
+describe('イベント作成', () => {
+  let service: EventsService;
+  let spy: jest.SpyInstance<Promise<MessageAPIResponseBase>>;
+
+  beforeEach(async () => {
+    const client = new Client({
+      channelAccessToken: 'dummy',
+      channelSecret: 'dummy',
+    });
+    spy = jest.spyOn(client, 'broadcast').mockImplementation();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        EventsService,
+        {
+          provide: 'LINE',
+          useFactory: async (req: Request) => {
+            const client = new Client({
+              channelAccessToken: 'dummyToken',
+              channelSecret: 'dummySecret',
+            });
+            return new LineService(client);
+          },
+          inject: [REQUEST],
+        },
+      ],
+      imports: [LineModule],
+    }).compile();
+
+    service = module.get<EventsService>(EventsService);
+  });
+
+  afterEach(() => {
+    findoneMock.mockReset();
+  });
+
+  it('正常', async () => {
+    /* --------------------------------------------------------------------------
+     * テスト準備
+     * -------------------------------------------------------------------------- */
+    const setting = new Setting();
+
+    const users = {} as unknown;
+    const usersMock = users as ISubCollection<User>;
+    usersMock.whereEqualTo = jest.fn().mockImplementation((prop, val) => {
+      return {
+        findOne: () => {
+          if (val === 'dummyUserId') {
+            return new Promise((resolve) => {
+              const user = new User();
+              user.id = 'dummyFirebaseUserId';
+              resolve(user);
+            });
+          }
+        },
+      };
+    });
+    setting.users = usersMock;
+
+    findoneMock.mockResolvedValue(setting);
+
+    const dto = new CreateEventDto();
+    dto.eventName = 'イベント名';
+    dto.leftButtonLabel = '参加';
+    dto.rightButtonLabel = '不参加';
+    dto.message = '参加しますか？';
+
+    /* --------------------------------------------------------------------------
+     * テスト実行
+     * -------------------------------------------------------------------------- */
+    await service.create('dummyUserId', dto);
   });
 });
 
