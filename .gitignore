@@ -11,6 +11,7 @@ firestore-debug.*.log*
 
 # Firebase cache
 .firebase/
+docker/firebase/
 
 # Firebase config
 
@@ -66,3 +67,6 @@ node_modules/
 
 # dotenv environment variables file
 .env
+
+# devContainer
+.vscode-server
