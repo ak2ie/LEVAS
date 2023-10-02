@@ -23,6 +23,7 @@ import { LineModule } from 'src/line/line.module';
 import { Client, MessageAPIResponseBase } from '@line/bot-sdk';
 import { REQUEST } from '@nestjs/core';
 import User from 'src/firestore/user';
+import { SettingService } from 'src/setting/setting.service';
 
 const findoneMock = jest.fn();
 const createMock = jest.fn();
@@ -203,10 +204,14 @@ describe('イベント作成', () => {
     }).compile();
 
     service = module.get<EventsService>(EventsService);
+
+    jest.useFakeTimers();
+    jest.setSystemTime(mockDate);
   });
 
   afterEach(() => {
     findoneMock.mockReset();
+    jest.useRealTimers();
   });
 
   it('正常', async () => {
@@ -230,7 +235,12 @@ describe('イベント作成', () => {
         },
       };
     });
+    
+    const events = {} as unknown;
+    const eventsMock = events as ISubCollection<Event>;
+    eventsMock.create = jest.fn();
     setting.users = usersMock;
+    setting.events = eventsMock;
 
     findoneMock.mockResolvedValue(setting);
 
@@ -244,6 +254,13 @@ describe('イベント作成', () => {
      * テスト実行
      * -------------------------------------------------------------------------- */
     await service.create('dummyUserId', dto);
+    expect(eventsMock.create).toBeCalledWith({
+      eventName:dto.eventName,
+      leftButtonLabel: dto.leftButtonLabel,
+      rightButtonLabel: dto.rightButtonLabel,
+      message: dto.message,
+      createdAt: mockDate
+    });
   });
 });
 

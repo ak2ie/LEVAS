@@ -6,6 +6,6 @@ import { LineModule } from 'src/line/line.module';
 @Module({
   controllers: [EventsController],
   providers: [EventsService],
-  imports: [LineModule],
+  // imports: [LineModule],
 })
 export class EventsModule {}
