@@ -13,7 +13,6 @@ import { CreateLineMessageDto } from 'src/line/dto/create-lineMessage';
 
 @Injectable()
 export class EventsService {
-  constructor(@Inject('LINE') private readonly lineService: LineService) {}
 
   /**
    * イベントを作成して、LINEで通知する
@@ -28,16 +27,6 @@ export class EventsService {
     if (!record) {
       throw new Error('ユーザー取得失敗');
     }
-
-    // LINE送信
-    const dto: CreateLineMessageDto = new CreateLineMessageDto();
-    dto.eventName = createEventDto.eventName;
-    dto.leftButtonLabel = createEventDto.leftButtonLabel;
-    dto.rightButtonLabel = createEventDto.rightButtonLabel;
-    dto.message = createEventDto.message;
-    this.lineService.sendBroadcastMessage(dto);
-
-    // record.events.push({});
 
     const event = new Event();
     event.eventName = createEventDto.eventName;
